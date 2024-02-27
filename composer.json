@@ -1,0 +1,22 @@
+{
+    "name": "jsanbae/tesoreria-api",
+    "description": "API para descargar Formulario 15 desde Tesorería General de la República",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Jsanbae\\TesoreriaAPI\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Javier Sanchez",
+            "email": "jsan5709@hotmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.4",
+        "dompdf/dompdf": "^2.0",
+        "picqer/php-barcode-generator": "^2.4"
+    }
+}
