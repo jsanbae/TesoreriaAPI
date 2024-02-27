@@ -15,6 +15,7 @@ namespace Jsanbae\TesoreriaAPI;
 use Jsanbae\TesoreriaAPI\DOM;
 
 use Dompdf\Dompdf;
+use Exception;
 
 class TesoreriaAPI
 {
@@ -24,12 +25,12 @@ class TesoreriaAPI
     private $form;
     private $folio;
 
-    function __construct(int $_rut, string $_dv, int $_form, int $_folio)
+    function __construct(int $rut, string $dv, int $form, int $folio)
     {
-        $this->rut = $_rut;
-        $this->dv = $_dv;
-        $this->form = $_form;
-        $this->folio = $_folio;
+        $this->rut = $rut;
+        $this->dv = $dv;
+        $this->form = $form;
+        $this->folio = $folio;
     }
 
     /**
@@ -38,14 +39,10 @@ class TesoreriaAPI
      * @return bool
      */
     public function isTesoreriaPagada():bool
-    {
-        $existe_comprobante = [];
-            
+    {            
         $response = $this->getRawOutputResponse();
     
-        preg_match('/(' . $this->folio . ')/', $response, $existe_comprobante);
-    
-        return (count($existe_comprobante)) ? true : false;
+        return $this->isFolioPresentInResponse($response);
     }
     
     /**
@@ -53,32 +50,37 @@ class TesoreriaAPI
      *
      * @param string|null $file_name
      * @return string
+     * @throws ComprobanteNotFoundException
      */
-    public function generaComprobantePago(string $file_name = null):string
+    public function generaComprobantePago(string $filename = null):string
     {
-        if (!$file_name) $file_name =  "CTES-" .  $this->folio . ".pdf";
+        if (empty(trim($filename))) $filename =  "CTES-" .  $this->folio . ".pdf";
 
-        $contenido = $this->getRawComprobantePDF();
+        $content = $this->getRawComprobantePDF();
         
-        file_put_contents($file_name, $contenido);
+        file_put_contents($filename, $content);
     
-        return $file_name;
+        return $filename;
     }
 
     /**
      * Obtiene el comprobante de pago de Tributos Aduaneros en formato PDF
-     *
+     * 
+     * @throws ComprobanteNotFoundException
      * @return string
      */
     public function getRawComprobantePDF():string
     {
         $rawOutput = $this->getRawOutputResponse();
+
+        if (!$this->isFolioPresentInResponse($rawOutput)) throw new ComprobanteNotFoundException();
+
         $output = (new DOM($rawOutput))->prepareDOM();
 
         $dompdf = new Dompdf();
 
         $options = $dompdf->getOptions();
-        $options->setIsRemoteEnabled(true); // Habilita la carga de recursos remotos (CSS, imágenes, etc.
+        $options->setIsRemoteEnabled(true); // Habilita la carga de recursos remotos (CSS, imágenes, etc.)
         $dompdf->setOptions($options);
 
         $dompdf->loadHtml($output);
@@ -92,6 +94,7 @@ class TesoreriaAPI
      * Obtiene la respuesta del servidor al solicitar 
      * el comprobante de pago de Tributos Aduaneros
      *
+     * @throws RequestErrorException
      * @return string
      */
     public function getRawOutputResponse():string 
@@ -105,6 +108,10 @@ class TesoreriaAPI
 
         $response = curl_exec( $ch );
 
+        if (curl_errno($ch)) throw new RequestErrorException(curl_error($ch));
+
+        curl_close($ch);
+
         return $response;
     }
 
@@ -116,6 +123,21 @@ class TesoreriaAPI
     private function getRequestParams():string
     {
         return "rut=" . $this->rut . "&dv=" . $this->dv . "&formulario=" . $this->form . "&folio=" . $this->folio;
+    }
+
+    /**
+     * Verifica si el folio del comprobante se encuentra en el response
+     *
+     * @param string $response
+     * @return bool
+     */
+    private function isFolioPresentInResponse(string $response):bool
+    {
+        $existe_comprobante = [];
+        
+        preg_match('/(' . $this->folio . ')/', $response, $existe_comprobante);
+
+        return !empty($existe_comprobante);
     }
 
 }
