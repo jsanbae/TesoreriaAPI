@@ -15,7 +15,7 @@
         }
     ],
     "require": {
-        "php": "^7.4",
+        "php": "^7.4|^8.0|^8.1",
         "dompdf/dompdf": "^2.0",
         "picqer/php-barcode-generator": "^2.4"
     },
